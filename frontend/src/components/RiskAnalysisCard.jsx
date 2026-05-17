@@ -1,5 +1,6 @@
-import { useState } from "react";
-import ResultCard from "./ResultCard.jsx";
+import { useEffect, useState } from "react";
+import MetricRow from "./MetricRow.jsx";
+import StatusPill from "./StatusPill.jsx";
 import { fetchRiskScore } from "../services/api.js";
 
 const statusStyles = {
@@ -8,67 +9,72 @@ const statusStyles = {
   FRAUD: "bg-rose-500/20 text-rose-300",
 };
 
-const RiskAnalysisCard = () => {
+const RiskAnalysisCard = ({ analysisId }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  const handleAnalyze = async () => {
-    setError("");
-    setLoading(true);
+  useEffect(() => {
+    if (!analysisId) return;
 
-    try {
-      const data = await fetchRiskScore();
-      setResult(data);
-    } catch (err) {
-      setError("Risk analysis failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const runAnalysis = async () => {
+      setError("");
+      setLoading(true);
+
+      try {
+        const data = await fetchRiskScore();
+        setResult(data);
+      } catch (err) {
+        setError("Risk analysis failed. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    runAnalysis();
+  }, [analysisId]);
 
   return (
-    <section className="glass-panel rounded-2xl p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <section className="glass-panel rounded-3xl p-5">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-display font-semibold">
-            Unified Risk Analysis
-          </h2>
-          <p className="text-sm text-slate-400">
-            Generate a unified fraud risk score and recommendation.
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
+            Unified Fraud Risk
           </p>
+          <h3 className="text-lg font-display font-semibold">Threat Level</h3>
         </div>
-        <button
-          onClick={handleAnalyze}
-          disabled={loading}
-          className="rounded-full bg-white/10 px-6 py-3 text-sm font-semibold transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Analyzing..." : "Generate Risk Score"}
-        </button>
+        {result && (
+          <StatusPill
+            label={result.risk_level}
+            className={statusStyles[result.risk_level]}
+          />
+        )}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <ResultCard
-          subtitle="Unified Risk"
+      <div className="mt-5 space-y-3">
+        <MetricRow
+          label="Risk Score"
           value={
-            result ? `${(result.risk_score * 100).toFixed(1)}%` : "Awaiting"
+            result
+              ? `${(result.risk_score * 100).toFixed(1)}%`
+              : loading
+              ? "Analyzing..."
+              : "Awaiting"
           }
-          title={result ? result.risk_level : "--"}
-          badgeText={result ? result.risk_level : ""}
-          badgeClass={result ? statusStyles[result.risk_level] : ""}
-          withPanel={false}
+          emphasize
+          loading={loading}
         />
-        <div className="flex flex-col justify-center gap-3 rounded-2xl border border-slate-800 bg-inkSoft/60 px-6 py-6">
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-400">
-            Recommendation
-          </p>
-          <p className="text-lg font-display font-semibold">
-            {result ? result.recommendation : "Run analysis to view guidance."}
-          </p>
-          <p className="text-sm text-slate-400">
-            The recommendation updates each time you generate a new risk score.
-          </p>
-        </div>
+        <MetricRow
+          label="Recommendation"
+          value={
+            result
+              ? result.recommendation
+              : loading
+              ? "Compiling"
+              : "--"
+          }
+          loading={loading}
+        />
       </div>
 
       {error && (

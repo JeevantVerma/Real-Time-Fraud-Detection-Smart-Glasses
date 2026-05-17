@@ -1,73 +1,87 @@
-import { useState } from "react";
-import UploadCard from "./UploadCard.jsx";
-import ResultCard from "./ResultCard.jsx";
+import { useEffect, useState } from "react";
+import MetricRow from "./MetricRow.jsx";
+import StatusPill from "./StatusPill.jsx";
 import { uploadFace } from "../services/api.js";
 
-const FaceVerificationCard = () => {
-  const [file, setFile] = useState(null);
+const statusStyles = {
+  match: "bg-emerald-500/20 text-emerald-200",
+  mismatch: "bg-rose-500/20 text-rose-200",
+};
+
+const FaceVerificationCard = ({ analysisId, faceFile }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  const handleAnalyze = async () => {
-    if (!file) {
-      setError("Please upload a face image first.");
-      return;
-    }
+  useEffect(() => {
+    if (!analysisId) return;
 
-    setError("");
-    setLoading(true);
+    const runAnalysis = async () => {
+      if (!faceFile) {
+        setError("No camera frame captured yet.");
+        return;
+      }
 
-    try {
-      const data = await uploadFace(file);
-      setResult(data);
-    } catch (err) {
-      setError("Face analysis failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      setError("");
+      setLoading(true);
+
+      try {
+        const data = await uploadFace(faceFile);
+        setResult(data);
+      } catch (err) {
+        setError("Face analysis failed. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    runAnalysis();
+  }, [analysisId, faceFile]);
 
   return (
-    <section className="glass-panel rounded-2xl p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <section className="glass-panel rounded-3xl p-5">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-display font-semibold">
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
             Face Verification
-          </h2>
-          <p className="text-sm text-slate-400">
-            Upload a clear image and verify the identity match score.
           </p>
+          <h3 className="text-lg font-display font-semibold">Identity Match</h3>
         </div>
-        <button
-          onClick={handleAnalyze}
-          disabled={loading}
-          className="rounded-full bg-white/10 px-6 py-3 text-sm font-semibold transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Analyzing..." : "Analyze Face"}
-        </button>
+        {result && (
+          <StatusPill
+            label={result.same_person ? "Match" : "Mismatch"}
+            className={
+              result.same_person ? statusStyles.match : statusStyles.mismatch
+            }
+          />
+        )}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <UploadCard
-          title="Face Capture"
-          description="Use a front-facing photo from the smart glasses camera."
-          accept="image/*"
-          file={file}
-          onFileChange={setFile}
-          withPanel={false}
-        />
-        <ResultCard
-          subtitle="Face Match Result"
+      <div className="mt-5 space-y-3">
+        <MetricRow
+          label="Face Match Score"
           value={
-            result ? (result.same_person ? "Match" : "No Match") : "Awaiting"
-          }
-          title={
             result
               ? `${(result.face_match_score * 100).toFixed(1)}%`
+              : loading
+              ? "Analyzing..."
+              : "Awaiting"
+          }
+          emphasize
+          loading={loading}
+        />
+        <MetricRow
+          label="Detected Persona"
+          value={
+            result
+              ? result.same_person
+                ? "Same Person"
+                : "Mismatch"
+              : loading
+              ? "Scanning"
               : "--"
           }
-          withPanel={false}
+          loading={loading}
         />
       </div>
 

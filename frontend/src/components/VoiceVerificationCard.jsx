@@ -1,73 +1,98 @@
-import { useState } from "react";
-import UploadCard from "./UploadCard.jsx";
-import ResultCard from "./ResultCard.jsx";
+import { useEffect, useState } from "react";
+import MetricRow from "./MetricRow.jsx";
+import StatusPill from "./StatusPill.jsx";
 import { uploadVoice } from "../services/api.js";
 
-const VoiceVerificationCard = () => {
-  const [file, setFile] = useState(null);
+const statusStyles = {
+  genuine: "bg-emerald-500/20 text-emerald-200",
+  spoofed: "bg-rose-500/20 text-rose-200",
+};
+
+const createFakeAudioFile = () => {
+  const data = new Uint8Array(6000);
+  if (window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(data);
+  } else {
+    data.forEach((_, index) => {
+      data[index] = Math.floor(Math.random() * 255);
+    });
+  }
+
+  return new File([data], `voice-${Date.now()}.wav`, { type: "audio/wav" });
+};
+
+const VoiceVerificationCard = ({ analysisId }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  const handleAnalyze = async () => {
-    if (!file) {
-      setError("Please upload an audio file first.");
-      return;
-    }
+  useEffect(() => {
+    if (!analysisId) return;
 
-    setError("");
-    setLoading(true);
+    const runAnalysis = async () => {
+      setError("");
+      setLoading(true);
 
-    try {
-      const data = await uploadVoice(file);
-      setResult(data);
-    } catch (err) {
-      setError("Voice analysis failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        const fakeAudio = createFakeAudioFile();
+        const data = await uploadVoice(fakeAudio);
+        setResult(data);
+      } catch (err) {
+        setError("Voice analysis failed. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    runAnalysis();
+  }, [analysisId]);
 
   return (
-    <section className="glass-panel rounded-2xl p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <section className="glass-panel rounded-3xl p-5">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-display font-semibold">
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
             Voice Verification
-          </h2>
-          <p className="text-sm text-slate-400">
-            Upload an audio clip to check for spoofing or authenticity.
           </p>
+          <h3 className="text-lg font-display font-semibold">
+            Authenticity Scan
+          </h3>
         </div>
-        <button
-          onClick={handleAnalyze}
-          disabled={loading}
-          className="rounded-full bg-white/10 px-6 py-3 text-sm font-semibold transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Analyzing..." : "Analyze Voice"}
-        </button>
+        {result && (
+          <StatusPill
+            label={result.spoof_detected ? "Spoofed" : "Genuine"}
+            className={
+              result.spoof_detected ? statusStyles.spoofed : statusStyles.genuine
+            }
+          />
+        )}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <UploadCard
-          title="Voice Capture"
-          description="Use a short phrase recorded by the smart glasses mic."
-          accept="audio/*"
-          file={file}
-          onFileChange={setFile}
-          withPanel={false}
-        />
-        <ResultCard
-          subtitle="Voice Authenticity"
+      <div className="mt-5 space-y-3">
+        <MetricRow
+          label="Voice Authenticity Score"
           value={
-            result ? (result.spoof_detected ? "Spoof" : "Authentic") : "Awaiting"
-          }
-          title={
             result
               ? `${(result.voice_real_score * 100).toFixed(1)}%`
+              : loading
+              ? "Analyzing..."
+              : "Awaiting"
+          }
+          emphasize
+          loading={loading}
+        />
+        <MetricRow
+          label="Spoof Detection"
+          value={
+            result
+              ? result.spoof_detected
+                ? "Spoof Detected"
+                : "Clean Signal"
+              : loading
+              ? "Scanning"
               : "--"
           }
-          withPanel={false}
+          loading={loading}
         />
       </div>
 

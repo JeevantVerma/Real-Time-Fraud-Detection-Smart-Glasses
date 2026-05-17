@@ -24,3 +24,55 @@ body {
 	border: 1px solid rgba(148, 163, 184, 0.2);
 	backdrop-filter: blur(12px);
 }
+
+.glass-panel {
+	box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.6),
+		0 0 32px rgba(56, 189, 248, 0.12);
+}
+
+.scan-line {
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(34, 211, 238, 0.7),
+		transparent
+	);
+	animation: scan 4s linear infinite;
+}
+
+.wave-bar {
+	width: 8px;
+	border-radius: 9999px;
+	background: linear-gradient(180deg, rgba(34, 211, 238, 0.9), rgba(14, 116, 144, 0.6));
+	animation: wave 1.2s ease-in-out infinite;
+}
+
+@keyframes scan {
+	0% {
+		transform: translateY(-10%);
+		opacity: 0;
+	}
+	50% {
+		opacity: 0.6;
+	}
+	100% {
+		transform: translateY(110%);
+		opacity: 0;
+	}
+}
+
+@keyframes wave {
+	0%,
+	100% {
+		transform: scaleY(0.35);
+		opacity: 0.6;
+	}
+	50% {
+		transform: scaleY(1);
+		opacity: 1;
+	}
+}
