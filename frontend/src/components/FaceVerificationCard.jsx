@@ -13,6 +13,16 @@ const FaceVerificationCard = ({ analysisId, faceFile }) => {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
+  const resolvedVerified = result?.verified ?? result?.same_person;
+  const scoreFromApi = result?.face_match_score;
+  const distanceFromApi = result?.distance;
+  const similarityScore =
+    typeof scoreFromApi === "number"
+      ? scoreFromApi * 100
+      : typeof distanceFromApi === "number"
+      ? Math.max(0, Math.min(1, 1 - distanceFromApi)) * 100
+      : null;
+
   useEffect(() => {
     if (!analysisId) return;
 
@@ -49,9 +59,9 @@ const FaceVerificationCard = ({ analysisId, faceFile }) => {
         </div>
         {result && (
           <StatusPill
-            label={result.same_person ? "Match" : "Mismatch"}
+            label={resolvedVerified ? "Match" : "Mismatch"}
             className={
-              result.same_person ? statusStyles.match : statusStyles.mismatch
+              resolvedVerified ? statusStyles.match : statusStyles.mismatch
             }
           />
         )}
@@ -61,8 +71,8 @@ const FaceVerificationCard = ({ analysisId, faceFile }) => {
         <MetricRow
           label="Face Match Score"
           value={
-            result
-              ? `${(result.face_match_score * 100).toFixed(1)}%`
+            similarityScore !== null
+              ? `${similarityScore.toFixed(1)}%`
               : loading
               ? "Analyzing..."
               : "Awaiting"
@@ -74,7 +84,7 @@ const FaceVerificationCard = ({ analysisId, faceFile }) => {
           label="Detected Persona"
           value={
             result
-              ? result.same_person
+              ? resolvedVerified
                 ? "Same Person"
                 : "Mismatch"
               : loading

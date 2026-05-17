@@ -6,13 +6,13 @@ from uuid import uuid4
 
 # Third-party imports
 from fastapi import APIRouter, File, UploadFile, HTTPException
+from deepface import DeepFace
 
-# Local application imports
-from utils.scoring import generate_face_score
+# Reference image path (place your reference image here)
+REFERENCE_IMAGE_PATH = os.path.join("reference_faces", "reference.jpg")
 
 # Create a router for face-related endpoints
 router = APIRouter()
-
 
 @router.post("/face-check")
 async def face_check(image: UploadFile = File(...)):
@@ -36,16 +36,43 @@ async def face_check(image: UploadFile = File(...)):
     except OSError as exc:
         raise HTTPException(status_code=500, detail="Failed to save image") from exc
 
-    # Generate a simulated face match score
-    score = generate_face_score()
+    # Ensure reference image exists
+    if not os.path.isfile(REFERENCE_IMAGE_PATH):
+        raise HTTPException(
+            status_code=500,
+            detail="Reference image not found at reference_faces/reference.jpg",
+        )
 
-    # Determine if the person is the same based on the score
-    same_person = score > 0.80
+    # Run DeepFace verification and clean up the temp file afterwards
+    try:
+        result = DeepFace.verify(
+            img1_path=file_path,
+            img2_path=REFERENCE_IMAGE_PATH,
+            detector_backend="opencv",
+            model_name="Facenet",
+            enforce_detection=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="No face detected or invalid image",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Face verification failed",
+        ) from exc
+    finally:
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
 
-    # Return the simulated response
+    # Return the real verification response
     return {
         "module": "face_verification",
-        "face_match_score": score,
-        "same_person": same_person,
+        "verified": result.get("verified"),
+        "distance": result.get("distance"),
+        "model": result.get("model"),
         "status": "success",
     }

@@ -16,6 +16,9 @@ backend/
 ├── utils/
 │   └── scoring.py
 │
+├── reference_faces/
+│   └── reference.jpg
+│
 ├── uploads/
 │   └── .gitkeep
 │
@@ -74,6 +77,7 @@ POST /face-check
 ```
 
 - Upload a file with the form field name `image`.
+- The uploaded image is compared to `reference_faces/reference.jpg` using DeepFace.
 
 Example curl:
 
@@ -111,5 +115,11 @@ curl -X GET "http://127.0.0.1:8000/risk-score"
 
 ## Notes
 
-- This backend simulates results with random scores.
+- Face verification uses DeepFace with the Facenet model and the OpenCV detector.
 - Uploaded files are saved in the `uploads/` folder.
+
+## DeepFace Setup
+
+1. Place your reference image at `backend/reference_faces/reference.jpg`.
+2. Install dependencies from `requirements.txt`.
+3. Start the server and call `POST /face-check` with an image file.
