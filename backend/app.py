@@ -5,6 +5,7 @@ import os
 
 # Third-party imports
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # Local application imports
 from routes.face import router as face_router
@@ -17,11 +18,19 @@ app = FastAPI(title="Fraud Detection Backend", version="0.1.0")
 # Ensure uploads directory exists on startup
 os.makedirs("uploads", exist_ok=True)
 
+# Enable CORS for local frontend development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Include modular routers
 app.include_router(face_router)
 app.include_router(voice_router)
 app.include_router(risk_router)
-
 
 @app.get("/")
 def root():
