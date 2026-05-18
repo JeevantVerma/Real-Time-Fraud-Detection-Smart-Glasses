@@ -19,6 +19,9 @@ backend/
 ├── reference_faces/
 │   └── reference.jpg
 │
+├── reference_audio/
+│   └── reference.wav
+│
 ├── uploads/
 │   └── .gitkeep
 │
@@ -93,6 +96,7 @@ POST /voice-check
 ```
 
 - Upload a file with the form field name `audio`.
+- The uploaded audio is compared to `reference_audio/reference.wav` using SpeechBrain.
 
 Example curl:
 
@@ -116,6 +120,7 @@ curl -X GET "http://127.0.0.1:8000/risk-score"
 ## Notes
 
 - Face verification uses DeepFace with the Facenet model and the OpenCV detector.
+- Voice verification uses SpeechBrain speaker recognition with cosine similarity.
 - Uploaded files are saved in the `uploads/` folder.
 
 ## DeepFace Setup
@@ -123,3 +128,9 @@ curl -X GET "http://127.0.0.1:8000/risk-score"
 1. Place your reference image at `backend/reference_faces/reference.jpg`.
 2. Install dependencies from `requirements.txt`.
 3. Start the server and call `POST /face-check` with an image file.
+
+## SpeechBrain Setup
+
+1. Place your reference audio at `backend/reference_audio/reference.wav`.
+2. Use WAV files (mono is recommended).
+3. Start the server and call `POST /voice-check` with an audio file.

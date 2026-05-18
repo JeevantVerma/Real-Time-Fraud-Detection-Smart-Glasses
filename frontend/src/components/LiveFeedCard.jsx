@@ -1,6 +1,6 @@
 import Webcam from "react-webcam";
 
-const LiveFeedCard = ({ webcamRef, lastCapture, isCapturing }) => {
+const LiveFeedCard = ({ webcamRef, lastCapture }) => {
   return (
     <section className="glass-panel relative h-full overflow-hidden rounded-3xl p-5">
       <div className="mb-4 flex items-center justify-between">
@@ -27,13 +27,6 @@ const LiveFeedCard = ({ webcamRef, lastCapture, isCapturing }) => {
           videoConstraints={{ facingMode: "user" }}
         />
         <div className="scan-line" />
-        {isCapturing && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50">
-            <div className="rounded-full border border-cyan-400/60 bg-cyan-500/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-cyan-200">
-              Capturing
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="mt-4 flex items-center justify-between text-xs text-slate-400">

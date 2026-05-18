@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import MetricRow from "./MetricRow.jsx";
 import StatusPill from "./StatusPill.jsx";
 import { uploadFace } from "../services/api.js";
@@ -8,7 +8,8 @@ const statusStyles = {
   mismatch: "bg-rose-500/20 text-rose-200",
 };
 
-const FaceVerificationCard = ({ analysisId, faceFile }) => {
+const FaceVerificationCard = ({ onCapture, onComplete }) => {
+  const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -23,30 +24,39 @@ const FaceVerificationCard = ({ analysisId, faceFile }) => {
       ? Math.max(0, Math.min(1, 1 - distanceFromApi)) * 100
       : null;
 
-  useEffect(() => {
-    if (!analysisId) return;
+  const handleCapture = () => {
+    const captured = onCapture?.();
+    if (!captured) {
+      setError("Unable to capture a frame from the camera.");
+      return;
+    }
 
-    const runAnalysis = async () => {
-      if (!faceFile) {
-        setError("No camera frame captured yet.");
-        return;
-      }
+    setError("");
+    setResult(null);
+    setFile(captured);
+    onComplete?.(false);
+  };
 
-      setError("");
-      setLoading(true);
+  const handleAnalyze = async () => {
+    if (!file) {
+      setError("Capture a face frame first.");
+      return;
+    }
 
-      try {
-        const data = await uploadFace(faceFile);
-        setResult(data);
-      } catch (err) {
-        setError("Face analysis failed. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    setError("");
+    setLoading(true);
 
-    runAnalysis();
-  }, [analysisId, faceFile]);
+    try {
+      const data = await uploadFace(file);
+      setResult(data);
+      onComplete?.(true);
+    } catch (err) {
+      setError("Face analysis failed. Please try again.");
+      onComplete?.(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="glass-panel rounded-3xl p-5">
@@ -56,6 +66,21 @@ const FaceVerificationCard = ({ analysisId, faceFile }) => {
             Face Verification
           </p>
           <h3 className="text-lg font-display font-semibold">Identity Match</h3>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleCapture}
+            className="rounded-full border border-cyan-400/40 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100 transition hover:bg-cyan-500/10"
+          >
+            Capture Face
+          </button>
+          <button
+            onClick={handleAnalyze}
+            disabled={loading || !file}
+            className="rounded-full bg-cyan-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100 transition hover:bg-cyan-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Analyzing..." : "Analyze Face"}
+          </button>
         </div>
         {result && (
           <StatusPill
@@ -89,6 +114,8 @@ const FaceVerificationCard = ({ analysisId, faceFile }) => {
                 : "Mismatch"
               : loading
               ? "Scanning"
+              : file
+              ? "Captured"
               : "--"
           }
           loading={loading}
