@@ -4,7 +4,6 @@
 import os
 import pathlib
 import shutil
-import logging
 from uuid import uuid4
 
 # Disable symlinks for Hugging Face downloads on Windows
@@ -42,8 +41,6 @@ from speechbrain.pretrained import EncoderClassifier
 # Reference audio path (place your reference audio here)
 REFERENCE_AUDIO_PATH = os.path.join("reference_audio", "reference.wav")
 
-# Logger for debugging voice verification errors
-logger = logging.getLogger(__name__)
 
 # Load the pretrained speaker recognition model once at startup
 SPEAKER_MODEL = EncoderClassifier.from_hparams(
@@ -121,16 +118,14 @@ async def voice_check(audio: UploadFile = File(...)):
         # Normalize similarity to 0..1 for cleaner API output
         similarity = max(0.0, min(1.0, (similarity + 1) / 2))
     except RuntimeError as exc:
-        logger.exception("Audio load failed")
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid or unsupported audio file: {exc}",
+            detail="Invalid or unsupported audio file",
         ) from exc
     except Exception as exc:
-        logger.exception("Voice verification failed")
         raise HTTPException(
             status_code=500,
-            detail=f"Voice verification failed: {exc}",
+            detail="Voice verification failed",
         ) from exc
     finally:
         try:

@@ -48,7 +48,7 @@ const encodeWav = (samples, sampleRate) => {
   return buffer;
 };
 
-const VoiceVerificationCard = ({ onComplete }) => {
+const VoiceVerificationCard = ({ onComplete, onScore }) => {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const [loading, setLoading] = useState(false);
@@ -149,6 +149,9 @@ const VoiceVerificationCard = ({ onComplete }) => {
     try {
       const data = await uploadVoice(audioFile);
       setResult(data);
+      if (typeof data.voice_similarity === "number") {
+        onScore?.(data.voice_similarity);
+      }
       onComplete?.(true);
     } catch (err) {
       setError("Voice analysis failed. Please try again.");

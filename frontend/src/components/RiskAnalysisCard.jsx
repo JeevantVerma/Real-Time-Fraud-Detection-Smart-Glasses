@@ -9,7 +9,13 @@ const statusStyles = {
   FRAUD: "bg-rose-500/20 text-rose-300",
 };
 
-const RiskAnalysisCard = ({ canAnalyze, faceReady, voiceReady }) => {
+const RiskAnalysisCard = ({
+  canAnalyze,
+  faceReady,
+  voiceReady,
+  faceScore,
+  voiceScore,
+}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -20,11 +26,16 @@ const RiskAnalysisCard = ({ canAnalyze, faceReady, voiceReady }) => {
       return;
     }
 
+    if (faceScore === null || voiceScore === null) {
+      setError("Scores are missing. Re-run face and voice analysis.");
+      return;
+    }
+
     setError("");
     setLoading(true);
 
     try {
-      const data = await fetchRiskScore();
+      const data = await fetchRiskScore(faceScore, voiceScore);
       setResult(data);
     } catch (err) {
       setError("Risk analysis failed. Please try again.");

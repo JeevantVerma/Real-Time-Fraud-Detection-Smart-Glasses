@@ -1,6 +1,6 @@
 # Real-Time Fraud Detection Smart Glasses - Phase A (Backend)
 
-This backend provides simulated face verification, voice verification, and unified risk scoring APIs.
+This backend provides face verification, voice verification, and unified risk scoring APIs.
 
 ## Project Structure
 
@@ -108,13 +108,24 @@ curl -X POST "http://127.0.0.1:8000/voice-check" \
 ### Unified Risk Score
 
 ```
-GET /risk-score
+POST /risk-score
+```
+
+Request body:
+
+```json
+{
+  "face_score": 0.89,
+  "voice_score": 0.42
+}
 ```
 
 Example curl:
 
 ```bash
-curl -X GET "http://127.0.0.1:8000/risk-score"
+curl -X POST "http://127.0.0.1:8000/risk-score" \
+  -H "Content-Type: application/json" \
+  -d "{\"face_score\": 0.89, \"voice_score\": 0.42}"
 ```
 
 ## Notes
@@ -122,6 +133,11 @@ curl -X GET "http://127.0.0.1:8000/risk-score"
 - Face verification uses DeepFace with the Facenet model and the OpenCV detector.
 - Voice verification uses SpeechBrain speaker recognition with cosine similarity.
 - Uploaded files are saved in the `uploads/` folder.
+
+## Risk Fusion
+
+- The API uses weighted fusion: `(face_score * 0.6) + (voice_score * 0.4)`.
+- SAFE if score >= 0.8, SUSPICIOUS if score >= 0.5, otherwise FRAUD.
 
 ## DeepFace Setup
 

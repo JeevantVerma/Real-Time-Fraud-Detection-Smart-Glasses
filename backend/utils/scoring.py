@@ -1,7 +1,4 @@
-"""Utility functions for generating simulated scores."""
-
-# Standard library imports
-import random
+"""Utility functions for risk fusion."""
 
 
 def _round_score(value: float) -> float:
@@ -9,25 +6,24 @@ def _round_score(value: float) -> float:
     return round(value, 2)
 
 
-def generate_face_score() -> float:
-    """Generate a random face match confidence score."""
-    return _round_score(random.uniform(0.70, 0.99))
+def _validate_score(value: float, label: str) -> None:
+    """Validate that a score is within 0..1."""
+    if value < 0 or value > 1:
+        raise ValueError(f"{label} must be between 0 and 1")
 
 
-def generate_voice_score() -> float:
-    """Generate a random voice authenticity score."""
-    return _round_score(random.uniform(0.60, 0.99))
-
-
-def generate_risk_score() -> float:
-    """Generate a random fraud risk score."""
-    return _round_score(random.uniform(0.0, 1.0))
+def fuse_scores(face_score: float, voice_score: float) -> float:
+    """Combine face and voice scores with weighted fusion."""
+    _validate_score(face_score, "face_score")
+    _validate_score(voice_score, "voice_score")
+    fused = (face_score * 0.6) + (voice_score * 0.4)
+    return _round_score(fused)
 
 
 def classify_risk(score: float) -> tuple[str, str]:
     """Classify risk level and recommendation based on score."""
-    if score < 0.3:
+    if score >= 0.8:
         return "SAFE", "Proceed"
-    if score <= 0.7:
-        return "SUSPICIOUS", "Review Manually"
-    return "FRAUD", "Block and Investigate"
+    if score >= 0.5:
+        return "SUSPICIOUS", "Manual verification advised"
+    return "FRAUD", "High fraud probability detected"

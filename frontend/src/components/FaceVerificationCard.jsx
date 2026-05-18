@@ -8,7 +8,7 @@ const statusStyles = {
   mismatch: "bg-rose-500/20 text-rose-200",
 };
 
-const FaceVerificationCard = ({ onCapture, onComplete }) => {
+const FaceVerificationCard = ({ onCapture, onComplete, onScore }) => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +49,17 @@ const FaceVerificationCard = ({ onCapture, onComplete }) => {
     try {
       const data = await uploadFace(file);
       setResult(data);
+
+      const faceScoreFromApi =
+        typeof data.face_match_score === "number"
+          ? data.face_match_score
+          : typeof data.distance === "number"
+          ? Math.max(0, Math.min(1, 1 - data.distance))
+          : null;
+
+      if (faceScoreFromApi !== null) {
+        onScore?.(faceScoreFromApi);
+      }
       onComplete?.(true);
     } catch (err) {
       setError("Face analysis failed. Please try again.");

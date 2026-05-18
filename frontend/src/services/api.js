@@ -22,7 +22,10 @@ export const uploadVoice = async (file) => {
   return response.data;
 };
 
-export const fetchRiskScore = async () => {
-  const response = await api.get("/risk-score");
+export const fetchRiskScore = async (faceScore, voiceScore) => {
+  const response = await api.post("/risk-score", {
+    face_score: faceScore,
+    voice_score: voiceScore,
+  });
   return response.data;
 };

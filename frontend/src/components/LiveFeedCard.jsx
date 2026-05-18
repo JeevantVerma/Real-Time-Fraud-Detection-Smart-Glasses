@@ -26,7 +26,6 @@ const LiveFeedCard = ({ webcamRef, lastCapture }) => {
           className="aspect-video w-full object-cover"
           videoConstraints={{ facingMode: "user" }}
         />
-        <div className="scan-line" />
       </div>
 
       <div className="mt-4 flex items-center justify-between text-xs text-slate-400">

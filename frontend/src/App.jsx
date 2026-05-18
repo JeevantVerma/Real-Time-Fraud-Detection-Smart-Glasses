@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar.jsx";
 import LiveFeedCard from "./components/LiveFeedCard.jsx";
-import AudioMonitoringCard from "./components/AudioMonitoringCard.jsx";
 import FaceVerificationCard from "./components/FaceVerificationCard.jsx";
 import VoiceVerificationCard from "./components/VoiceVerificationCard.jsx";
 import RiskAnalysisCard from "./components/RiskAnalysisCard.jsx";
@@ -22,17 +21,11 @@ const dataUrlToFile = (dataUrl, filename) => {
 const App = () => {
   const webcamRef = useRef(null);
   const [lastCapture, setLastCapture] = useState(null);
-  const [monitorTick, setMonitorTick] = useState(0);
   const [faceReady, setFaceReady] = useState(false);
   const [voiceReady, setVoiceReady] = useState(false);
+  const [faceScore, setFaceScore] = useState(null);
+  const [voiceScore, setVoiceScore] = useState(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMonitorTick((current) => current + 1);
-    }, 3500);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const captureFace = () => {
     const screenshot = webcamRef.current?.getScreenshot();
@@ -56,16 +49,21 @@ const App = () => {
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <LiveFeedCard webcamRef={webcamRef} lastCapture={lastCapture} />
           <div className="flex flex-col gap-6">
-            <AudioMonitoringCard tick={monitorTick} />
             <FaceVerificationCard
               onCapture={captureFace}
               onComplete={setFaceReady}
+              onScore={setFaceScore}
             />
-            <VoiceVerificationCard onComplete={setVoiceReady} />
+            <VoiceVerificationCard
+              onComplete={setVoiceReady}
+              onScore={setVoiceScore}
+            />
             <RiskAnalysisCard
               canAnalyze={faceReady && voiceReady}
               faceReady={faceReady}
               voiceReady={voiceReady}
+              faceScore={faceScore}
+              voiceScore={voiceScore}
             />
           </div>
         </section>
