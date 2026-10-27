@@ -40,8 +40,10 @@ async def document_check(document: UploadFile = File(...)):
             "module": "document_verification",
             "doc_authenticity_score": doc_res["doc_authenticity_score"],
             "is_tampered": doc_res["is_tampered"],
+            "authenticity_status": doc_res["authenticity_status"],
+            "authenticity_status_description": doc_res["authenticity_status_description"],
             "document_type": doc_res["document_type"],
-            "has_id_portrait": doc_res["has_id_portrait"],
+            "has_id_portrait": doc_res.get("has_id_portrait", False),
             "details": doc_res["details"],
             "status": "success",
         }

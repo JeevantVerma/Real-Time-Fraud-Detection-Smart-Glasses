@@ -3,10 +3,16 @@ import MetricRow from "./MetricRow.jsx";
 import StatusPill from "./StatusPill.jsx";
 import { uploadFace } from "../services/api.js";
 
+// Graded, honest labels — see utils/anti_spoofing.py. A borderline score
+// gets a distinct treatment rather than the same alarm styling as a
+// confidently atypical one, and the "atypical"/"strong indicators" bands
+// describe what was measured rather than naming a confirmed attack type.
 const statusStyles = {
-  REAL_HUMAN: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
-  AI_DEEPFAKE_DETECTED: "bg-rose-500/20 text-rose-300 border-rose-500/40",
-  SCREEN_REPLAY_ATTACK: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  LIKELY_GENUINE: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+  BORDERLINE_CLOSE_TO_GENUINE: "bg-sky-500/20 text-sky-300 border-sky-500/40",
+  ATYPICAL_VISUAL_PROFILE: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  STRONG_PRESENTATION_ATTACK_INDICATORS: "bg-rose-500/20 text-rose-300 border-rose-500/40",
+  NO_FACE_DETECTED: "bg-slate-500/20 text-slate-300 border-slate-500/40",
   INVALID_IMAGE: "bg-slate-500/20 text-slate-300 border-slate-500/40",
 };
 
@@ -108,15 +114,16 @@ const FaceVerificationCard = ({ onCapture, onComplete, onScore }) => {
           label="Deepfake Artifact Check"
           value={
             result
-              ? result.is_deepfake
-                ? "DEEPFAKE / GAN DETECTED"
-                : "REAL HUMAN VERIFIED"
+              ? result.liveness_status?.replace(/_/g, " ")
               : loading
               ? "Analyzing Texture"
               : "--"
           }
           loading={loading}
         />
+        {result?.liveness_status_description && (
+          <p className="text-xs text-cyan-200/70 italic px-1">{result.liveness_status_description}</p>
+        )}
         {result?.details && (
           <div className="rounded-xl bg-slate-950/60 p-3 text-xs font-mono text-slate-400 grid grid-cols-2 gap-2 border border-slate-800">
             <div>FFT Freq Ratio: <span className="text-cyan-300">{result.details.fft_frequency_ratio}</span></div>

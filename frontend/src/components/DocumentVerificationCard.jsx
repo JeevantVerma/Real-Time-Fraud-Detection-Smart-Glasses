@@ -3,6 +3,17 @@ import MetricRow from "./MetricRow.jsx";
 import StatusPill from "./StatusPill.jsx";
 import { uploadDocument, uploadFaceToIdSync } from "../services/api.js";
 
+// Graded, honest labels — see utils/anti_spoofing.py. A borderline score
+// gets a distinct treatment rather than the same alarm styling as a
+// confidently tampered one.
+const statusStyles = {
+  LIKELY_AUTHENTIC: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+  BORDERLINE_REVIEW_RECOMMENDED: "bg-sky-500/20 text-sky-300 border-sky-500/40",
+  ATYPICAL_COMPRESSION_PROFILE: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  STRONG_TAMPERING_INDICATORS: "bg-rose-500/20 text-rose-300 border-rose-500/40",
+  INVALID_IMAGE: "bg-slate-500/20 text-slate-300 border-slate-500/40",
+};
+
 const DocumentVerificationCard = ({ liveFaceFile, onComplete, onScore }) => {
   const [docFile, setDocFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -71,8 +82,8 @@ const DocumentVerificationCard = ({ liveFaceFile, onComplete, onScore }) => {
         </div>
         {docResult && (
           <StatusPill
-            label={docResult.is_tampered ? "Tampered / Forged" : "Authentic Document"}
-            className={docResult.is_tampered ? "bg-rose-500/20 text-rose-300 border-rose-500/40" : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"}
+            label={docResult.authenticity_status?.replace(/_/g, " ")}
+            className={statusStyles[docResult.authenticity_status] || "bg-indigo-500/20 text-indigo-200"}
           />
         )}
       </div>
@@ -111,6 +122,9 @@ const DocumentVerificationCard = ({ liveFaceFile, onComplete, onScore }) => {
           emphasize
           loading={loading}
         />
+        {docResult?.authenticity_status_description && (
+          <p className="text-xs text-indigo-200/70 italic px-1">{docResult.authenticity_status_description}</p>
+        )}
         <MetricRow
           label="Face-to-ID Sync Match"
           value={

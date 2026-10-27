@@ -41,6 +41,7 @@ async def face_check(image: UploadFile = File(...)):
             "face_liveness_score": liveness_res["face_liveness_score"],
             "is_deepfake": liveness_res["is_deepfake"],
             "liveness_status": liveness_res["liveness_status"],
+            "liveness_status_description": liveness_res["liveness_status_description"],
             "details": liveness_res["details"],
             "status": "success",
         }

@@ -82,18 +82,33 @@ def analyze_voice_liveness(audio_path: str) -> dict:
 
         liveness_score = float(np.clip(liveness_score, 0.05, 0.98))
 
+        # Graded, honest labeling instead of a hard genuine/spoof cutoff with
+        # confidently-named attack types. The old logic split on a single
+        # hf_ratio threshold and called the result "REPLAY_ATTACK" or
+        # "AI_SYNTHETIC_VOICE_CLONE" — that's not real forensic evidence of
+        # either mechanism, just a low-vs-lower bucket. This describes what
+        # was actually measured and hedges accordingly. A borderline band
+        # also exists so a score of 0.64 doesn't get the same confident
+        # treatment as a score of 0.05.
         is_spoof = liveness_score < 0.65
-        spoof_type = "GENUINE_HUMAN_VOICE"
-        if is_spoof:
-            if hf_ratio < 0.001:
-                spoof_type = "AI_SYNTHETIC_VOICE_CLONE"
-            else:
-                spoof_type = "REPLAY_ATTACK"
+        if liveness_score >= 0.65:
+            spoof_type = "LIKELY_GENUINE"
+            spoof_type_description = "Spectral profile is consistent with genuine live speech."
+        elif liveness_score >= 0.50:
+            spoof_type = "BORDERLINE_CLOSE_TO_GENUINE"
+            spoof_type_description = "Close to the genuine threshold — recommend a manual re-check rather than an automatic decision."
+        elif liveness_score >= 0.30:
+            spoof_type = "ATYPICAL_SPECTRAL_PROFILE"
+            spoof_type_description = "Reduced high-frequency content or unusually low variation detected. This may indicate synthetic or replayed audio, or a capture device with limited frequency response — not confirmed as either."
+        else:
+            spoof_type = "STRONG_SPOOFING_INDICATORS"
+            spoof_type_description = "Multiple heuristic signals (high-frequency content, spectral variation, energy variance) are all well outside the genuine range."
 
         return {
             "voice_liveness_score": round(liveness_score, 2),
             "is_spoof": is_spoof,
             "spoof_type": spoof_type,
+            "spoof_type_description": spoof_type_description,
             "details": {
                 "high_frequency_ratio": round(float(hf_ratio), 5),
                 "spectral_centroid_std": round(centroid_std, 2),
@@ -106,6 +121,7 @@ def analyze_voice_liveness(audio_path: str) -> dict:
             "voice_liveness_score": 0.50,
             "is_spoof": True,
             "spoof_type": "ANALYSIS_ERROR",
+            "spoof_type_description": "Audio could not be analyzed (unexpected format or decoding error).",
             "details": {"error": str(exc)},
         }
 
@@ -121,6 +137,7 @@ def analyze_facial_liveness(image_path: str) -> dict:
             "face_liveness_score": 0.0,
             "is_deepfake": True,
             "liveness_status": "INVALID_IMAGE",
+            "liveness_status_description": "Image file could not be read.",
             "details": {"error": "Could not read image file"},
         }
 
@@ -135,6 +152,7 @@ def analyze_facial_liveness(image_path: str) -> dict:
             "face_liveness_score": 0.05,
             "is_deepfake": True,
             "liveness_status": "NO_FACE_DETECTED",
+            "liveness_status_description": "No face was detected in frame.",
             "details": {"faces_found": 0, "multiple_faces_detected": False},
         }
 
@@ -203,18 +221,29 @@ def analyze_facial_liveness(image_path: str) -> dict:
 
     liveness_score = float(np.clip(liveness_score, 0.05, 0.98))
 
+    # Same graded, honest labeling as the voice module — see the comment
+    # there. The old logic split on a single laplacian_var threshold and
+    # named a specific attack ("SCREEN_REPLAY_ATTACK"); this describes the
+    # measurement instead of asserting a mechanism we can't actually confirm.
     is_deepfake = liveness_score < 0.65
-    liveness_status = "REAL_HUMAN"
-    if is_deepfake:
-        if laplacian_var < 60:
-            liveness_status = "SCREEN_REPLAY_ATTACK"
-        else:
-            liveness_status = "AI_DEEPFAKE_DETECTED"
+    if liveness_score >= 0.65:
+        liveness_status = "LIKELY_GENUINE"
+        liveness_status_description = "Sharpness, frequency, and color-variance checks are all consistent with a live face."
+    elif liveness_score >= 0.50:
+        liveness_status = "BORDERLINE_CLOSE_TO_GENUINE"
+        liveness_status_description = "Close to the genuine threshold — recommend a manual re-check rather than an automatic decision."
+    elif liveness_score >= 0.30:
+        liveness_status = "ATYPICAL_VISUAL_PROFILE"
+        liveness_status_description = "Unusual blur, frequency, or color-variance characteristics detected. This may indicate a screen replay, printed photo, or deepfake — not confirmed as any specific one."
+    else:
+        liveness_status = "STRONG_PRESENTATION_ATTACK_INDICATORS"
+        liveness_status_description = "Multiple heuristic signals (sharpness, frequency spectrum, color variance) are all well outside the live-face range."
 
     return {
         "face_liveness_score": round(liveness_score, 2),
         "is_deepfake": is_deepfake,
         "liveness_status": liveness_status,
+        "liveness_status_description": liveness_status_description,
         "details": {
             "laplacian_variance": round(laplacian_var, 2),
             "fft_frequency_ratio": round(freq_ratio, 3),
@@ -235,6 +264,8 @@ def analyze_document_authenticity(image_path: str) -> dict:
         return {
             "doc_authenticity_score": 0.0,
             "is_tampered": True,
+            "authenticity_status": "INVALID_IMAGE",
+            "authenticity_status_description": "Image file could not be read.",
             "document_type": "UNKNOWN",
             "details": {"error": "Invalid image file"},
         }
@@ -285,11 +316,27 @@ def analyze_document_authenticity(image_path: str) -> dict:
         authenticity_score -= 0.10  # Missing standard ID portrait
 
     authenticity_score = float(np.clip(authenticity_score, 0.10, 0.99))
+
+    # Same graded, honest labeling as the voice and face modules.
     is_tampered = authenticity_score < 0.65
+    if authenticity_score >= 0.65:
+        authenticity_status = "LIKELY_AUTHENTIC"
+        authenticity_status_description = "Compression-error pattern is consistent with an unedited document."
+    elif authenticity_score >= 0.50:
+        authenticity_status = "BORDERLINE_REVIEW_RECOMMENDED"
+        authenticity_status_description = "Close to the authenticity threshold — recommend a manual re-check rather than an automatic decision."
+    elif authenticity_score >= 0.30:
+        authenticity_status = "ATYPICAL_COMPRESSION_PROFILE"
+        authenticity_status_description = "Uneven error-level pattern detected. This may indicate localized digital editing — not confirmed as tampering on its own."
+    else:
+        authenticity_status = "STRONG_TAMPERING_INDICATORS"
+        authenticity_status_description = "Error-level variance is well outside the range expected for an unedited document."
 
     return {
         "doc_authenticity_score": round(authenticity_score, 2),
         "is_tampered": is_tampered,
+        "authenticity_status": authenticity_status,
+        "authenticity_status_description": authenticity_status_description,
         "document_type": "IDENTITY_CARD" if has_id_portrait else "OFFICIAL_DOCUMENT",
         "has_id_portrait": has_id_portrait,
         "details": {

@@ -3,10 +3,16 @@ import MetricRow from "./MetricRow.jsx";
 import StatusPill from "./StatusPill.jsx";
 import { uploadVoice } from "../services/api.js";
 
+// Graded, honest labels — a score just under the genuine threshold gets a
+// distinct "borderline" treatment rather than the same alarm styling as a
+// confidently spoofed score. See utils/anti_spoofing.py for what each band
+// actually measures; these are not confirmed attack-type forensics.
 const statusStyles = {
-  GENUINE_HUMAN_VOICE: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
-  AI_SYNTHETIC_VOICE_CLONE: "bg-rose-500/20 text-rose-300 border-rose-500/40",
-  REPLAY_ATTACK: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  LIKELY_GENUINE: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+  BORDERLINE_CLOSE_TO_GENUINE: "bg-sky-500/20 text-sky-300 border-sky-500/40",
+  ATYPICAL_SPECTRAL_PROFILE: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  STRONG_SPOOFING_INDICATORS: "bg-rose-500/20 text-rose-300 border-rose-500/40",
+  ANALYSIS_ERROR: "bg-slate-500/20 text-slate-300 border-slate-500/40",
 };
 
 const RECORD_SECONDS = 5;
@@ -217,15 +223,16 @@ const VoiceVerificationCard = ({ onComplete, onScore }) => {
           label="Voice Classification"
           value={
             result
-              ? result.spoof_detected
-                ? `SPOOF DETECTED (${result.spoof_type})`
-                : "GENUINE HUMAN VOICE"
+              ? result.spoof_type?.replace(/_/g, " ")
               : loading
               ? "Scanning F0 Jitter"
               : "--"
           }
           loading={loading}
         />
+        {result?.spoof_type_description && (
+          <p className="text-xs text-purple-200/70 italic px-1">{result.spoof_type_description}</p>
+        )}
         {result?.details && (
           <div className="rounded-xl bg-slate-950/60 p-3 text-xs font-mono text-slate-400 grid grid-cols-2 gap-2 border border-slate-800">
             <div>HF Ratio: <span className="text-purple-300">{result.details.high_frequency_ratio}</span></div>

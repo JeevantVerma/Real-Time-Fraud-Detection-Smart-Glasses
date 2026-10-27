@@ -2,10 +2,6 @@
 
 Guidance for Claude Code sessions working in this repository. Keep this file current — when an architectural fact here goes stale (a module gets built, a limitation gets fixed, a principle changes), update it in the same session as the change that invalidates it.
 
-## ⚠️ Do not `git pull` / merge without reading this first
-
-`origin/main` still has one unpulled commit ("yuvansh da goat") that deletes the old `firmware/smartglasses/` source tree — confirmed via `git log HEAD..origin/main --stat`; `git rev-list --left-right --count HEAD...origin/main` reported local `0`, remote `1` as of the last check, unresolved. That specific deletion is now moot either way: the team lead deliberately deleted `firmware/smartglasses/` locally too (2026-08-21) to rebuild firmware from scratch with PlatformIO — see the Firmware bullet below, now built and verified. But the underlying situation (an unexplained history-rewriting commit from Yuvansh, never discussed) is still unresolved and still worth a conversation before syncing.
-
 ## What this is
 
 A capstone project (Thapar Institute) building wearable smart glasses that fuse voice, face, and document analysis into one real-time fraud/identity verdict. Full context and the current build status live in [README.md](README.md). Session-by-session narrative history (what broke, what was diagnosed, in what order) lives in [YuvanshProgress.md](YuvanshProgress.md) — read that when picking up mid-task; this file only holds durable, still-true facts.

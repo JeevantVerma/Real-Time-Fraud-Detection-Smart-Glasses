@@ -82,6 +82,7 @@ async def voice_check(audio: UploadFile = File(...)):
             "voice_liveness_score": liveness_res["voice_liveness_score"],
             "spoof_detected": liveness_res["is_spoof"],
             "spoof_type": liveness_res["spoof_type"],
+            "spoof_type_description": liveness_res["spoof_type_description"],
             "details": liveness_res["details"],
             "status": "success",
         }
