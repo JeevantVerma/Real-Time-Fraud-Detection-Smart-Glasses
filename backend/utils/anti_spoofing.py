@@ -25,6 +25,38 @@ def _get_face_cascade() -> cv2.CascadeClassifier:
     return _FACE_CASCADE
 
 
+def voice_features(data: np.ndarray, sample_rate: int) -> tuple:
+    """Raw (unrounded) heuristic voice features: (hf_ratio, centroid_std, energy_variance).
+
+    Shared by analyze_voice_liveness and the evaluation ablation that learns
+    weights for these same features (training/voice/heuristic_logreg.py).
+    """
+    # 1. High-Frequency Harmonic Ratio Analysis
+    # Synthetic TTS voice clones often attenuate or artifact frequencies above 7kHz
+    nyquist = sample_rate / 2.0
+    cutoff_hf = min(7000.0, nyquist - 100.0)
+    
+    b_hf, a_hf = scipy.signal.butter(4, cutoff_hf / nyquist, btype="highpass")
+    hf_signal = scipy.signal.filtfilt(b_hf, a_hf, data)
+    
+    total_energy = np.sum(data ** 2) + 1e-9
+    hf_energy = np.sum(hf_signal ** 2)
+    hf_ratio = hf_energy / total_energy
+
+    # 2. Spectral Centroid and Spectral Rolloff Consistency
+    frequencies, times, spec = scipy.signal.spectrogram(data, fs=sample_rate, nperseg=512)
+    spec_energy = np.sum(spec, axis=0) + 1e-9
+    
+    # Spectral Centroid (mean frequency weighted by energy)
+    spectral_centroid = np.sum(frequencies[:, np.newaxis] * spec, axis=0) / spec_energy
+    centroid_std = float(np.std(spectral_centroid))
+
+    # 3. Short-Time Energy Variance (Micro-jitter/shimmer check)
+    frame_energy = np.sum(spec ** 2, axis=0)
+    energy_variance = float(np.var(frame_energy / (np.max(frame_energy) + 1e-9)))
+    return float(hf_ratio), centroid_std, energy_variance
+
+
 def analyze_voice_liveness(audio_path: str) -> dict:
     """Analyze audio file for AI voice cloning, TTS synthesis, and replay attack indicators.
 
@@ -38,29 +70,7 @@ def analyze_voice_liveness(audio_path: str) -> dict:
         if len(data) == 0:
             raise ValueError("Empty audio signal")
 
-        # 1. High-Frequency Harmonic Ratio Analysis
-        # Synthetic TTS voice clones often attenuate or artifact frequencies above 7kHz
-        nyquist = sample_rate / 2.0
-        cutoff_hf = min(7000.0, nyquist - 100.0)
-        
-        b_hf, a_hf = scipy.signal.butter(4, cutoff_hf / nyquist, btype="highpass")
-        hf_signal = scipy.signal.filtfilt(b_hf, a_hf, data)
-        
-        total_energy = np.sum(data ** 2) + 1e-9
-        hf_energy = np.sum(hf_signal ** 2)
-        hf_ratio = hf_energy / total_energy
-
-        # 2. Spectral Centroid and Spectral Rolloff Consistency
-        frequencies, times, spec = scipy.signal.spectrogram(data, fs=sample_rate, nperseg=512)
-        spec_energy = np.sum(spec, axis=0) + 1e-9
-        
-        # Spectral Centroid (mean frequency weighted by energy)
-        spectral_centroid = np.sum(frequencies[:, np.newaxis] * spec, axis=0) / spec_energy
-        centroid_std = float(np.std(spectral_centroid))
-
-        # 3. Short-Time Energy Variance (Micro-jitter/shimmer check)
-        frame_energy = np.sum(spec ** 2, axis=0)
-        energy_variance = float(np.var(frame_energy / (np.max(frame_energy) + 1e-9)))
+        hf_ratio, centroid_std, energy_variance = voice_features(data, sample_rate)
 
         # 4. Score Calculation based on acoustic cues
         # Natural human speech has rich micro-variations (jitter/shimmer) and high-frequency harmonics
