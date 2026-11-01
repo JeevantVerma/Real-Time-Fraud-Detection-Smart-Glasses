@@ -157,11 +157,15 @@ def main():
         train_items = train_items[:: max(1, len(train_items) // args.train_limit)][: args.train_limit]
     if args.dev_limit:
         dev_items = dev_items[:: max(1, len(dev_items) // args.dev_limit)][: args.dev_limit]
-    loader_kw = dict(num_workers=args.workers, pin_memory=device == "cuda",
-                     persistent_workers=args.workers > 0, worker_init_fn=_seed_worker)
+    # Each Windows worker process loads its own copy of the CUDA DLLs; keeping train *and* dev
+    # workers alive at once exhausted the paging file (WinError 1455). So only the train
+    # loader's workers persist, and dev loaders start a few fresh ones per evaluation.
     train_loader = DataLoader(TrainSet(train_items, args.aug), batch_size=args.batch_size,
-                              shuffle=True, drop_last=True, **loader_kw)
-    dev_loaders = {name: DataLoader(DevSet(dev_items, ch), batch_size=16, shuffle=False, **loader_kw)
+                              shuffle=True, drop_last=True, num_workers=args.workers,
+                              pin_memory=device == "cuda", persistent_workers=args.workers > 0,
+                              worker_init_fn=_seed_worker)
+    dev_loaders = {name: DataLoader(DevSet(dev_items, ch), batch_size=16, shuffle=False,
+                                    num_workers=min(args.workers, 3), pin_memory=device == "cuda")
                    for name, ch in (("clean", False), ("channel", True))}
 
     # ---- model / optimisation (loss, optimiser and SWA mirror AASIST's main.py)
@@ -237,6 +241,7 @@ def main():
                         swa_model=swa_model.state_dict(), state=state), run_dir / "last.pth")
 
     # ---- SWA: recompute BatchNorm statistics, then keep whichever of best/SWA wins on dev
+    del train_loader  # shuts down its persistent workers before update_bn starts new ones
     summary = dict(best_select=state["best"], swa_checkpoints=state["swa_n"])
     final = "best"
     if state["swa_n"] > 1:
